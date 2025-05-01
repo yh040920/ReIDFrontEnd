@@ -179,11 +179,6 @@ onMounted(() => {
     //   "videoName": "摄像头1",
     //   "frame": "base64编码的图像数据" or {src, src, src}
     // }
-    // 后端返回格式{
-    //   "type": "video", or "videoResult"
-    //   "videoName": "摄像头1",
-    //   "frame": "base64编码的图像数据" or {src, src, src}
-    // }
     ws.value.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === 'video') {
