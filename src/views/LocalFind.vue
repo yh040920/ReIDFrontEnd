@@ -5,11 +5,10 @@
         <div style="margin-top: 20px; margin-bottom: 20px;">
             <el-upload
                 v-model:file-list="fileList"
-                :action='localFindImgDeleteAction'
+                :action='localFindImgUploadAction'
                 list-type="picture-card"
                 :on-preview="handlePictureCardPreview"
                 :on-remove="handleRemove"
-                :on-success="upLoadSuccess"
             >
                 <el-icon><Plus /></el-icon>
             </el-upload>
@@ -23,8 +22,9 @@
         <el-upload
             class="upload-demo"
             drag
-            action="https://run.mocky.io/v3/9d059bf9-4660-45f2-925d-ce80ad6c4d15"
+            :action='localFindVideoUploadAction'
             multiple
+            :on-success="uploadVideoSuccess"
         >
             <el-icon class="el-icon--upload"><VideoCamera /></el-icon>
             <div class="el-upload__text">
@@ -73,7 +73,7 @@
 
 <script setup lang="ts">
 import type { UploadProps, UploadUserFile } from 'element-plus'
-import { LocalFindService, localFindImgDeleteAction, WebSocketConnection } from '@/api/localFindApi'
+import { LocalFindService, localFindImgUploadAction, WebSocketConnection, localFindVideoUploadAction } from '@/api/localFindApi'
 import type { CollapseModelValue, ComponentSize } from 'element-plus'
 
 const activeNames = ref(['1'])
@@ -125,7 +125,7 @@ const deleteVideoByName = async (name: string) => {
     
 }
 
-const upLoadSuccess = (response: {success: boolean; error: string; videoNames: {name: string; src: string} []}) => {
+const uploadVideoSuccess = (response: {success: boolean; error: string; videoNames: {name: string; src: string} []}) => {
     if(response.success){
         activeVideos.value = response.videoNames
         ElMessage.success("上传成功");
@@ -143,7 +143,6 @@ const startFind = async() => {
     }
 }
 
-
 const ws = ref<WebSocket | null>(null);
 
 onMounted(() => {
@@ -156,6 +155,7 @@ onMounted(() => {
         name: "yyh2.mp4",
         src: 'https://tse2-mm.cn.bing.net/th/id/OIP-C.iVKpmfAaxfF0eWw08UI9gQHaHa?w=154&h=180&c=7&r=0&o=5&dpr=1.8&pid=1.7'
     }]
+    
     findResults.value = [{
         name: "yyh1.mp4",
         srcs: ["https://tse4-mm.cn.bing.net/th/id/OIP-C.u7vpthRCGVxLIaGacmcLQQHaHa?w=187&h=188&c=7&r=0&o=5&dpr=1.8&pid=1.7",
@@ -175,9 +175,9 @@ onMounted(() => {
     };
 
     // 后端返回格式{
-    //   "type": "video", or "videoResult"
+    //   "type": "video",
     //   "videoName": "摄像头1",
-    //   "frame": "base64编码的图像数据" or {src, src, src}
+    //   "frame": "base64编码的图像数据"
     // }
     ws.value.onmessage = (event) => {
         const data = JSON.parse(event.data);
@@ -189,11 +189,14 @@ onMounted(() => {
                 card.src = url;
             }
         }else if(data.type === 'videoResult'){
-            const blob = new Blob([data.frame], { type: 'image/jpeg' });
-            const url = URL.createObjectURL(blob);
-            const card = activeVideos.value.find(card => card.name === data.videoName);
+            // 后端返回格式{
+            //   "type": "videoResult"
+            //   "videoName": "yyh1.mp4",
+            //   "frame": [src, src, src]
+            // } 
+            const card = findResults.value.find(card => card.name === data.videoName);
             if (card) {
-                card.src = url;
+                card.srcs = data.frame;
             }
         }
     };
