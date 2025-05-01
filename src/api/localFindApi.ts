@@ -7,7 +7,7 @@ interface NormResponse {
 
 export const localFindImgUploadAction = '' // 本地视频查找目标图片上传地址
 
-export const localFindVideoUploadAction = '' // 本地视频查找目标图片上传地址
+export const localFindVideoUploadAction = '' // 本地视频查找视频片上传地址
 
 export const WebSocketConnection = 'ws://your-backend-websocket-url/' // 本地
 

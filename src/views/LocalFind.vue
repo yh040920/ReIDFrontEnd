@@ -9,6 +9,7 @@
                 list-type="picture-card"
                 :on-preview="handlePictureCardPreview"
                 :on-remove="handleRemove"
+                multiple
             >
                 <el-icon><Plus /></el-icon>
             </el-upload>
@@ -155,7 +156,7 @@ onMounted(() => {
         name: "yyh2.mp4",
         src: 'https://tse2-mm.cn.bing.net/th/id/OIP-C.iVKpmfAaxfF0eWw08UI9gQHaHa?w=154&h=180&c=7&r=0&o=5&dpr=1.8&pid=1.7'
     }]
-    
+
     findResults.value = [{
         name: "yyh1.mp4",
         srcs: ["https://tse4-mm.cn.bing.net/th/id/OIP-C.u7vpthRCGVxLIaGacmcLQQHaHa?w=187&h=188&c=7&r=0&o=5&dpr=1.8&pid=1.7",
