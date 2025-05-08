@@ -34,6 +34,16 @@
 
   const options: () => EChartsOption = () => {
     const opt: EChartsOption = {
+        legend: {
+        show: true, // 确保图例显示
+        orient: 'vertical', // 水平排列
+        left: 'right', // 靠右显示（也可以是 'left' 或 'center'）
+        top: 'left', // 顶部显示
+        textStyle: {
+          color: isDark.value ? '#fff' : '#333' // 根据主题设置文字颜色
+        },
+        data: props.data.map(item => item.name) // 图例数据来自 props.data 的 name
+      },
       series: [
         {
           name: '数据占比',
@@ -45,9 +55,9 @@
           },
           label: {
             show: props.showLabel,
-            formatter: '{b}\n{d}%',
+            formatter: '{b}\n{c}', // 显示名称 + 数值
             position: 'outside',
-            color: '#999'
+            color: '#999', // 适配主题
           },
           emphasis: {
             label: {

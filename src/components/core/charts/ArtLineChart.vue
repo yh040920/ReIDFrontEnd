@@ -18,10 +18,10 @@
   } = useChart()
 
   interface Props {
-    data: number[]
+    data: number[][]; // 修改为二维数组
     xAxisData?: string[]
     height?: string
-    color?: string
+    colors?: string[]; // 支持每条线不同颜色
     lineWidth?: number
     showAreaColor?: boolean
     showAxisLabel?: boolean
@@ -31,9 +31,9 @@
 
   const props = withDefaults(defineProps<Props>(), {
     height: useChartOps().chartHeight,
-    data: () => [0, 0, 0, 0, 0, 0, 0],
+    data: () => [[0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0]], // 默认三条线数据
     xAxisData: () => [],
-    color: '',
+    colors: () => [], // 默认颜色数组
     lineWidth: 3,
     showAreaColor: false,
     showAxisLabel: true,
@@ -42,9 +42,10 @@
   })
 
   const options: () => EChartsOption = () => {
-    const computedColor = props.color || useChartOps().themeColor
+    const computedColors = props.colors.length > 0 ? props.colors : [useChartOps().themeColor, useChartOps().themeColor, useChartOps().themeColor];
 
     return {
+      animation: false,
       grid: {
         top: 15,
         right: 15,
@@ -68,42 +69,45 @@
         axisLine: getAxisLineStyle(props.showAxisLine),
         splitLine: getSplitLineStyle(props.showSplitLine)
       },
-      series: [
-        {
-          data: props.data,
-          type: 'line',
-          smooth: true,
-          symbol: 'none',
-          lineStyle: {
-            width: props.lineWidth,
-            color: computedColor
-          },
-          areaStyle: props.showAreaColor
-            ? {
-                color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-                  {
-                    offset: 0,
-                    color: props.color
-                      ? hexToRgba(props.color, 0.2).rgba
-                      : hexToRgba(getCssVariable('--el-color-primary'), 0.2).rgba
-                  },
-                  {
-                    offset: 1,
-                    color: props.color
-                      ? hexToRgba(props.color, 0.01).rgba
-                      : hexToRgba(getCssVariable('--el-color-primary'), 0.01).rgba
-                  }
-                ])
-              }
-            : undefined
-        }
-      ]
+      series: props.data.map((lineData, index) => ({
+        data: lineData,
+        type: 'line',
+        smooth: true,
+        symbol: 'none',
+        lineStyle: {
+          width: props.lineWidth,
+          color: computedColors[index]
+        },
+        areaStyle: props.showAreaColor
+          ? {
+              color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                {
+                  offset: 0,
+                  color: computedColors[index]
+                    ? hexToRgba(computedColors[index], 0.2).rgba
+                    : hexToRgba(getCssVariable('--el-color-primary'), 0.2).rgba
+                },
+                {
+                  offset: 1,
+                  color: computedColors[index]
+                    ? hexToRgba(computedColors[index], 0.01).rgba
+                    : hexToRgba(getCssVariable('--el-color-primary'), 0.01).rgba
+                }
+              ])
+            }
+          : undefined
+      }))
     }
   }
 
   watch(isDark, () => {
     return initChart(options())
   })
+
+  // 监听 props.data 的变化
+  watch(() => props.data, () => {
+    return initChart(options())
+  }, { deep: true })
 
   onMounted(() => {
     return initChart(options())
@@ -114,4 +118,4 @@
   .line-chart {
     width: calc(100% + 10px);
   }
-</style>
+</style>    

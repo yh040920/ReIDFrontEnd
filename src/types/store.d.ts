@@ -7,6 +7,7 @@ export interface UserInfo {
   username: string
   avatar: string
   email: string
+  status: string
 }
 
 // 系统主题样式（light | dark）

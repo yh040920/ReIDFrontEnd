@@ -3,7 +3,7 @@
 import AppConfig from '@/config'
 import { BaseResult } from '@/types/axios'
 import { UserInfo } from '@/types/store'
-import avatar from '@imgs/user/avatar.png'
+import avatar from '@imgs/user/gqlx.jpg'
 
 export class UserService {
   // 模拟登录接口
@@ -42,9 +42,10 @@ export class UserService {
         data: {
           id: 1,
           name: '张三',
-          username: 'John Snow',
+          username: 'Y Yh',
           avatar: avatar,
-          email: 'art.design@gmail.com'
+          email: '130118xxxx@outlook.com',
+          status: '管理员'
         }
       })
     })

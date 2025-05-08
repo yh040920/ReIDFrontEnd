@@ -55,6 +55,7 @@
       ])
 
     return {
+      animation: false,
       grid: {
         top: 15,
         right: 0,
@@ -91,11 +92,22 @@
     }
   }
 
+  // 监听数据变化
+  watch(() => props.data, () => {
+    initChart(options())
+  }, { deep: true })
+
+  // 监听主题变化
   watch(isDark, () => {
-    return initChart(options())
+    initChart(options())
+  })
+
+  // 监听颜色变化
+  watch(() => props.color, () => {
+    initChart(options())
   })
 
   onMounted(() => {
-    return initChart(options())
+    initChart(options())
   })
 </script>

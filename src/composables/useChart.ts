@@ -68,7 +68,11 @@ export function useChart(initOptions?: EChartsOption) {
 
   const initChart = (options: EChartsOption = {}) => {
     if (!chartRef.value) return
-
+    // 如果 chart 已经存在，先销毁它
+    if (chart) {
+        chart.dispose();
+        chart = null;
+    }
     chart = echarts.init(chartRef.value)
     chart.setOption({ ...initOptions, ...options })
   }

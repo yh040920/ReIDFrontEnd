@@ -802,5 +802,12 @@ export const asyncRoutes: MenuListType[] = [
     name: 'LocalFind',
     component: '/LocalFind',
     meta: { title: '视频查找', keepAlive: false, icon: '&#xe6e8;', isInMainContainer: true}
+  },
+  {
+    id:104,
+    path: '/DashBoardself',
+    name: 'DashBoardself',
+    component: '/DashBoard',
+    meta: { title: '数据展示', keepAlive: false, icon: '&#xe721;', isInMainContainer: true}
   }
 ]
