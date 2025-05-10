@@ -101,4 +101,8 @@
   onMounted(() => {
     return initChart(options())
   })
+
+  watch(() => props.data, () => {
+    initChart(options())
+  }, { deep: true })
 </script>

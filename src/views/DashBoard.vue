@@ -85,7 +85,15 @@
       <el-col :sm="24" :md="24" :lg="16">
           <el-card style="height: 100%;" shadow="never">
               <div class="card-header" style="margin-bottom: 20px;">
-                  <p class="title">人流量热力图</p>
+                  <el-text size="large">人流量热力图</el-text>
+                  <el-date-picker
+                    v-model="month"
+                    type="month"
+                    placeholder="选择月份"
+                    size="small"
+                    @change="monthChange"
+                    style="width: 100px; margin-left: 20px;"
+                  />
               </div>
               <div>
                 <div id="Map" ref="mapRef" style="width: 100%; height: 50rem;"></div>
@@ -101,19 +109,31 @@
 import { ref, computed, onUnmounted } from 'vue';
 import Banner from './widget/Banner.vue'
 import {styleJson} from '@/store/modules/styleJson'
+import { websocket, DataViewService, camerasInterface} from '@/api/dataViewApi'
+import { CameraService } from '@/api/cameraManagementApi'
 
-const cameras = ref([
-  { value: 25, name: '已开启' },
-  { value: 2, name: '错误' },
-  { value: 5, name: '未开启' },
-])
+const month = ref('')
+
+const monthChange = async () => {
+  if(month.value){ // 选定时间改变
+    const getPersonNumByMonthResult = await DataViewService.getPersonNumByMonth(month.value);
+    if(getPersonNumByMonthResult.success){
+      personNum = getPersonNumByMonthResult.personNum
+    }else{
+      ElMessage.error(getPersonNumByMonthResult.error)
+    }
+  }
+}
+
+const cameras = ref<camerasInterface []>([])
+
 const colorCameras = ['#67C23A', '#F56C6C', '#4C87F3'] // 第二个是成功绿色
 // 计算 cameras 中所有 value 的总和
 const totalCameras = computed(() => {
     return cameras.value.reduce((sum, item) => sum + item.value, 0)
 })
 
-const threadNums = ref([5, 8, 4, 9, 6, 7])
+const threadNums = ref([0, 0, 0, 0, 0, 0])
 
 // 每秒添加一个随机数并删除第一个数字
 const intervalIdThread = setInterval(() => {
@@ -191,135 +211,257 @@ interface IdAndLocation {
 }
 const camerasTable = ref<IdAndLocation []>([])
 
+interface heatMapDataInterface {
+  lat: number;
+  lng: number;
+  count: number;
+}
+
+const heatMapData = ref<heatMapDataInterface []>([])
+
+let personNum: { [key: string]: number } = {}
+
+let socket: WebSocket;
+
 onMounted(async () => {
+  // 加载百度地图资源
+  await loadMapScript();
 
-    loadMapScript(); // 加载百度地图资源
+  // 连接WebSocket服务器,从后端不断获取硬件数据，后端发回的数据格式为：
+  // # 生成线程数据 (1-10)
+  //       thread_data = random.randint(1, 10)
+        
+  //       # 生成系统硬件数据 (1-100)
+  //       system_data = [
+  //           random.randint(1, 100),
+  //           random.randint(1, 100),
+  //           random.randint(1, 100)
+  //       ]
+        
+  //       # 发送数据到前端
+  //       socketio.emit('hardware_data', {
+  //           'thread_data': thread_data,
+  //           'system_data': system_data
+  //       })
+  socket = new WebSocket(websocket);
+  
+  socket.onopen = () => {
+    ElMessage.success('WebSocket连接已建立');
+  };
+  
+  socket.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    
+    // 更新线程数据
+    threadNums.value = [...threadNums.value.slice(1), data.thread_data];
+    
+    // 更新系统硬件数据
+    systemHardwareData.value = systemHardwareData.value.map((arr, index) => [
+      ...arr.slice(1),
+      data.system_data[index]
+    ]);
+    
+    // 更新weeklyList
+    data.system_data.forEach((num: number, index: number) => {
+      weeklyList.value[index].value = num;
+    });
+  };
+  
+  socket.onclose = () => {
+    console.log('WebSocket连接已关闭');
+    // 可以添加重连逻辑
+  };
 
-    // 这个地方会获得摄像头信息表，以获得摄像头的坐标信息
-    // const result = await CameraService.getCameraInfo()
+  // 这个地方会获取以天或者月为单位的每个摄像头的人流量数据格式为{"CameraId": int, "CameraId": int}
+  // const getPersonNumByMonthResult = await DataViewService.getPersonNumByMonth("now");
+  // if(getPersonNumByMonthResult.success){
+  //   personNum = getPersonNumByMonthResult.personNum
+  // }else{
+  //   ElMessage.error(getPersonNumByMonthResult.error)
+  // }
+  personNum = {"图书馆门口": 100, "校门口": 200, "一食堂门口": 150, "二食堂门口": 300}
+  // 这里获取摄像头的状况分类数量
+  // const getCameraStatusNumBySortResult = await DataViewService.getCameraStatusNumBySort()
+  // if(getCameraStatusNumBySortResult.success){
+  //   cameras.value = getCameraStatusNumBySortResult.cameras.value
+  // }else{
+  //   ElMessage.error(getCameraStatusNumBySortResult.error)
+  // }
+  cameras.value = [
+    { value: 25, name: '已开启' },
+    { value: 2, name: '错误' },
+    { value: 5, name: '未开启' },
+  ]
 
-    const result = [
-        {
-            "CameraId": "图书馆门口",
-            "Load": 1,
-            "Show": 1,
-            "Lunch": 1,
-            "Detect": 0,
-            "RTSPinput": "rtsp://example.com/input/camera1",
-            "RTSPoutput": "rtsp://example.com/output/camera1",
-            "Location": "103.99583, 30.587114"
-        },
-        {
-            "CameraId": "校门口",
-            "Load": 1,
-            "Show": 1,
-            "Lunch": 1,
-            "Detect": 0,
-            "RTSPinput": "rtsp://example.com/input/camera2",
-            "RTSPoutput": "rtsp://example.com/output/camera2",
-            "Location": "103.996127, 30.585287"
-        },
-        {
-            "CameraId": "一食堂门口",
-            "Load": 1,
-            "Show": 0,
-            "Lunch": 0,
-            "Detect": 0,
-            "RTSPinput": "rtsp://example.com/input/camera3",
-            "RTSPoutput": "rtsp://example.com/output/camera3",
-            "Location": "103.991563, 30.585085"
-        },
-        {
-            "CameraId": "二食堂门口",
-            "Load": 1,
-            "Show": 0,
-            "Lunch": 0,
-            "Detect": 0,
-            "RTSPinput": "rtsp://example.com/input/camera4",
-            "RTSPoutput": "rtsp://example.com/output/camera4",
-            "Location": "103.991455, 30.587425"
-        }
-    ]
-    // 将result过滤后赋值
-    camerasTable.value = result.map(item => ({
-        CameraId: item.CameraId,
-        Location: item.Location
+  // 这个地方会获得摄像头信息表，以获得摄像头的坐标信息
+  // const result = await CameraService.getCameraInfo()
+  const result = [
+    {
+      "CameraId": "图书馆门口",
+      "Load": 1,
+      "Show": 1,
+      "Lunch": 1,
+      "Detect": 0,
+      "RTSPinput": "rtsp://example.com/input/camera1",
+      "RTSPoutput": "rtsp://example.com/output/camera1",
+      "Location": "103.99583, 30.587114"
+    },
+    {
+      "CameraId": "校门口",
+      "Load": 1,
+      "Show": 1,
+      "Lunch": 1,
+      "Detect": 0,
+      "RTSPinput": "rtsp://example.com/input/camera2",
+      "RTSPoutput": "rtsp://example.com/output/camera2",
+      "Location": "103.996127, 30.585287"
+    },
+    {
+      "CameraId": "一食堂门口",
+      "Load": 1,
+      "Show": 0,
+      "Lunch": 0,
+      "Detect": 0,
+      "RTSPinput": "rtsp://example.com/input/camera3",
+      "RTSPoutput": "rtsp://example.com/output/camera3",
+      "Location": "103.991563, 30.585085"
+    },
+    {
+      "CameraId": "二食堂门口",
+      "Load": 1,
+      "Show": 0,
+      "Lunch": 0,
+      "Detect": 0,
+      "RTSPinput": "rtsp://example.com/input/camera4",
+      "RTSPoutput": "rtsp://example.com/output/camera4",
+      "Location": "103.991455, 30.587425"
+    }
+  ];
+  
+  // 将result过滤后赋值
+  camerasTable.value = result.map(item => ({
+      CameraId: item.CameraId,
+      Location: item.Location
     })); 
 
-    // 初始化地图后，将camerasTable.value中的坐标绘制上地图
-    const drawMarkersOnMap = () => {
-        const { BMap } = window as any;
-        camerasTable.value.forEach(camera => {
-            const [lat, lng] = camera.Location.split(',').map(Number);
-            const point = new BMap.Point(lat, lng);
-            const marker = new BMap.Marker(point);
-            map.addOverlay(marker);
-            markers.push({ cameraId: camera.CameraId, marker });
-        });
+    // 初始化地图
+    init();
+
+    // 等待地图和热力图库完全初始化
+    await waitForMapAndHeatmapInitialization();
+
+    // 绘制标记点
+    drawMarkersOnMap();
+
+    // 初始化热力图
+    initHeatmap();
+  });
+
+// 绘制标记点到地图
+const drawMarkersOnMap = () => {
+  const { BMap } = window as any;
+  camerasTable.value.forEach(camera => {
+    // 注意：百度地图的坐标顺序是先经度后纬度，你之前的代码顺序可能有误
+    const [lng, lat] = camera.Location.split(',').map(Number);
+    const point = new BMap.Point(lng, lat);
+    const marker = new BMap.Marker(point);
+    map.addOverlay(marker);
+    markers.push({ cameraId: camera.CameraId, marker });
+    heatMapData.value.push({lat: Number(lat), lng: Number(lng), count: personNum[camera.CameraId as keyof typeof personNum]})
+  });
+};
+
+// 初始化热力图
+const initHeatmap = () => {
+  const { BMapLib } = window as any;
+  const heatmapOverlay = new BMapLib.HeatmapOverlay({"radius":20});
+  map.addOverlay(heatmapOverlay);
+  heatmapOverlay.setDataSet({data: heatMapData.value, max: 300}); // 调整max值以匹配你的数据范围
+  heatmapOverlay.show();
+};
+
+// 等待地图和热力图库完全初始化
+const waitForMapAndHeatmapInitialization = () => {
+  return new Promise((resolve) => {
+    const check = () => {
+      if (map && window.BMapLib && window.BMapLib.HeatmapOverlay) {
+        resolve(true);
+      } else {
+        setTimeout(check, 100);
+      }
     };
-
-    // 等待地图初始化完成后绘制标记
-    const waitForMapInitialization = () => {
-        if (map) {
-            drawMarkersOnMap();
-        } else {
-            setTimeout(waitForMapInitialization, 100);
-        }
-    };
-
-    waitForMapInitialization();
-});
-
-
-// 之后在需要添加动画时调用此函数
-const addBounceAnimationToMarker = (cameraId: string) => {
-    
-    const { BMap } = window as any;
-    console.log('BMap.ANIMATION_BOUNCE:', BMap.ANIMATION_BOUNCE);
-    const targetMarker = markers.find(item => item.cameraId === cameraId);
-    if (targetMarker) {
-        targetMarker.marker.setAnimation(BMAP_ANIMATION_BOUNCE);
-    }
+    check();
+  });
 };
 
 // 初始化地图
 const init = () => {
-    const { BMap } = window as any; // 注意要带window，不然会报错
-    map = new BMap.Map("Map"); // allmap必须和dom上的id一致
-    
-    map.centerAndZoom(
-        new BMap.Point(103.995529,30.587848),
-        18
-    ); 
-    map.setCurrentCity("成都");
-    map.enableScrollWheelZoom(true);
-    map.setMapStyleV2({styleJson:styleJson});
+  const { BMap } = window as any; // 注意要带window，不然会报错
+  map = new BMap.Map("Map"); // allmap必须和dom上的id一致
+  
+  map.centerAndZoom(
+    new BMap.Point(103.995529,30.587848),
+    18
+  ); 
+  map.setCurrentCity("成都");
+  map.enableScrollWheelZoom(true);
+  map.setMapStyleV2({styleJson:styleJson});
 };
 
+// 加载地图脚本，返回Promise
 const loadMapScript = () => {
-    // 此处在所需页面引入资源就是，不用再public/index.html中引入
-    var script = document.createElement("script");
-    script.type = "text/javascript";
-    script.className = "loadmap"; // 给script一个类名
-    script.src =
-        'https://api.map.baidu.com/getscript?v=3.0&ak=O6x5ThpmsemrA9Da452eB2Z6GclLYdCe';
-    // 此处需要注意：申请ak时，一定要应用类别一定要选浏览器端，不能选服务端，不然地图会报ak无效
-    script.onload = () => {
-        // 使用script.onload，待资源加载完成，再初始化地图
-        init();
-    };
-    script.onerror = () => {
-        console.error('百度地图脚本加载失败');
-    };
-    let loadmap = document.getElementsByClassName("loadmap");
-    if (loadmap) {
-        // 每次append script之前判断一下，避免重复添加script资源标签
-        for (var i = 0; i < loadmap.length; i++) {
-            document.body.removeChild(loadmap[i]);
-        }
-    }
+  return new Promise((resolve, reject) => {
+    // 移除已有的地图脚本
+    const existingScripts = document.querySelectorAll('.loadmap');
+    existingScripts.forEach(script => script.remove());
 
-    document.body.appendChild(script);
+    // 创建百度地图核心库脚本
+    const coreScript = document.createElement('script');
+    coreScript.type = 'text/javascript';
+    coreScript.className = 'loadmap core';
+    coreScript.src = 'https://api.map.baidu.com/getscript?v=3.0&ak=O6x5ThpmsemrA9Da452eB2Z6GclLYdCe';
+    
+    // 核心库加载完成后，加载热力图扩展库
+    coreScript.onload = () => {
+      loadHeatmapLibrary().then(resolve).catch(reject);
+    };
+    
+    coreScript.onerror = (error) => {
+      ElMessage.error('百度地图核心库加载失败');
+      reject(error);
+    };
+    
+    document.body.appendChild(coreScript);
+  });
+};
+declare var window: Window & {
+    [key: string]: any; // 允许window对象有任意属性
+};
+// 加载热力图扩展库，返回Promise
+const loadHeatmapLibrary = () => {
+  return new Promise((resolve, reject) => {
+    const heatmapScript = document.createElement('script');
+    heatmapScript.type = 'text/javascript';
+    heatmapScript.className = 'loadmap heatmap';
+    heatmapScript.src = 'https://api.map.baidu.com/library/Heatmap/2.0/src/Heatmap_min.js';
+
+    // 扩展库加载完成后，初始化地图
+    heatmapScript.onload = () => {
+      if (window.BMap && window.BMapLib && window.BMapLib.HeatmapOverlay) {
+        resolve(true);
+      } else {
+        ElMessage.error('百度地图热力图组件加载失败');
+        reject(new Error('BMapLib.HeatmapOverlay not found'));
+      }
+    };
+    
+    heatmapScript.onerror = (error) => {
+      ElMessage.error('百度地图热力图组件加载失败');
+      reject(error);
+    };
+    
+    document.body.appendChild(heatmapScript);
+  });
 };
 
 onUnmounted(() => {
