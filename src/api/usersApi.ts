@@ -45,7 +45,7 @@ export class UserService {
           username: 'Y Yh',
           avatar: avatar,
           email: '130118xxxx@outlook.com',
-          status: '管理员'
+          status: 'userPlus'
         }
       })
     })

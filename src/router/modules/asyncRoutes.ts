@@ -780,34 +780,58 @@ export const asyncRoutes: MenuListType[] = [
     path: '/CameraManagement',
     name: 'CameraManagement',
     component: '/CameraManagement',
-    meta: { title: '摄像头管理', keepAlive: false, icon: '&#xe76d;', isInMainContainer: true}
+    meta: { title: '摄像头管理', keepAlive: false, icon: '&#xe76d;', isInMainContainer: true, roles: ['admin', 'userPlus']}
   },
   {
     id:101,
     path: '/Find',
     name: 'Find',
     component: '/Find',
-    meta: { title: '目标查找', keepAlive: false, icon: '&#xe700;', isInMainContainer: true}
+    meta: { title: '目标查找', keepAlive: false, icon: '&#xe700;', isInMainContainer: true, roles: ['admin', 'user', 'userPlus']}
   },
   {
     id:102,
     path: '/ImgManagement',
     name: 'ImgManagement',
     component: '/ImgManagement',
-    meta: { title: '图像查看', keepAlive: false, icon: '&#xe634;', isInMainContainer: true}
+    meta: { title: '图像查看', keepAlive: false, icon: '&#xe634;', isInMainContainer: true, roles: ['admin', 'user', 'userPlus']}
   },
   {
     id:103,
     path: '/LocalFind',
     name: 'LocalFind',
     component: '/LocalFind',
-    meta: { title: '视频查找', keepAlive: false, icon: '&#xe6e8;', isInMainContainer: true}
+    meta: { title: '视频查找', keepAlive: false, icon: '&#xe6e8;', isInMainContainer: true, roles: ['admin', 'user', 'userPlus']}
   },
   {
     id:104,
     path: '/DashBoardself',
     name: 'DashBoardself',
     component: '/DashBoard',
-    meta: { title: '数据展示', keepAlive: false, icon: '&#xe721;', isInMainContainer: true}
-  }
+    meta: { title: '数据展示', keepAlive: false, icon: '&#xe721;', isInMainContainer: true, roles: ['admin', 'userPlus']}
+  },
+  {
+    id: 105,
+    name: 'Users',
+    path: '/users',
+    component: RoutesAlias.Home,
+    meta: {
+      title: '用户管理',
+      icon: '&#xe86e;',
+      keepAlive: false, 
+      roles: ['admin', 'userPlus']
+    },
+    children: [
+      {
+        id: 301,
+        path: 'account',
+        name: 'Account',
+        component: "/Account",
+        meta: {
+          title: 'menus.user.account',
+          keepAlive: true
+        }
+      }
+    ]
+  },
 ]

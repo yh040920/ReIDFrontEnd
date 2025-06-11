@@ -2,6 +2,7 @@ import { fourDotsSpinnerSvg } from '@/assets/svg/loading'
 import { asyncRoutes } from '@/router/modules/asyncRoutes'
 import { MenuListType } from '@/types/menu'
 import { processRoute } from '@/utils/menu'
+import { log } from 'console'
 import { ElLoading } from 'element-plus'
 
 // 菜单接口

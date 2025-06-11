@@ -40,6 +40,8 @@
   import type { MenuListType } from '@/types/menu'
   import { formatMenuTitle } from '@/utils/menu'
   import { handleMenuJump } from '@/utils/jump'
+  import { useUserStore } from '@/store/modules/user';
+  import { storeToRefs } from 'pinia';
 
   // 类型定义
   interface Props {
@@ -66,8 +68,6 @@
     (e: 'close'): void
   }>()
 
-  // 计算属性
-  const filteredMenuItems = computed(() => filterRoutes(props.list))
 
   // 跳转页面
   const goPage = (item: MenuListType) => {
@@ -83,15 +83,28 @@
     return Boolean(item.children?.length)
   }
 
+  const userStore = useUserStore();
+  const { info } = storeToRefs(userStore);
+  console.log(info.value.status);
+  
   // 过滤菜单项
   const filterRoutes = (items: MenuListType[]): MenuListType[] => {
     return items
+      .filter((item) => {
+        if (item.meta.roles) {
+          return item.meta.roles.includes(info.value.status || "user");
+        }
+        return true;
+      })
       .filter((item) => !item.meta.isHide)
       .map((item) => ({
         ...item,
         children: item.children ? filterRoutes(item.children) : undefined
-      }))
-  }
+      }));
+  };
+
+  // 计算属性，使用过滤函数过滤菜单项
+  const filteredMenuItems = computed(() => filterRoutes(props.list));
 </script>
 
 <script lang="ts">
